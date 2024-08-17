@@ -37,35 +37,35 @@ class ApiProductController extends Controller
         try {
             // $product = "";
             // DB::transaction(function () use ($request) {
-                $product = Product::query()->create([
-                    'name' => $request->input('name'),
-                    'description' => $request->input('description'),
-                    'price' => $request->input('price'),
-                    'category_id' => $request->input('dm')
+            $product = Product::query()->create([
+                'name' => $request->input('name'),
+                'description' => $request->input('description'),
+                'price' => $request->input('price'),
+                'category_id' => $request->input('dm')
 
+            ]);
+            // dd($product);
+            $product->Tag()->attach($request->tag);
+
+            // foreach ($request->tag as $key => $tag) {
+            // }
+            foreach ($request->gallery as  $gallery) {
+                // $path = Storage::put('public/image', $gallery);
+                Gallery::query()->create([
+                    'product_id' => $product->id,
+                    'image_path' => $gallery
                 ]);
-                // dd($product);
-                $product->Tag()->attach($request->tag);
+            }
 
-                // foreach ($request->tag as $key => $tag) {
-                // }
-                foreach ($request->gallery as  $gallery) {
-                    // $path = Storage::put('public/image', $gallery);
-                    Gallery::query()->create([
-                        'product_id' => $product->id,
-                        'image_path' => $gallery
-                    ]);
-                }
-               
-                return response()->json([
-                    'success' => 'thêm dữ liệu thành công',
-                    'data' =>$product ,
-                ], 200);
+            return response()->json([
+                'success' => 'thêm dữ liệu thành công',
+                'data' => $product,
+            ], 200);
             // });
-            
 
-            
-           
+
+
+
         } catch (\Throwable $th) {
             return $th->getMessage();
         }
@@ -77,6 +77,18 @@ class ApiProductController extends Controller
     public function show(string $id)
     {
         //
+        $data = Product::query()->findOrFail($id);
+        // dd($data);
+        $data->load([
+            "Category",
+            "Galleries",
+            "Tag"
+        ]);
+        // dd($data->Tag);
+        return response()->json([
+            'success' => "trang chi tiết sản phẩm",
+            'data' => $data,
+        ]);
     }
 
     /**
@@ -85,6 +97,33 @@ class ApiProductController extends Controller
     public function update(Request $request, string $id)
     {
         //
+        // $url = "";
+        $product = Product::query()->findOrFail($id)->load(['Tag']);
+        Product::query()->where('id', $id)->update([
+            'name' => $request->input('name'),
+            'description' => $request->input('description'),
+            'price' => $request->input('price'),
+            'category_id' => $request->input('dm')
+
+        ]);
+        $product->Tag()->sync($request->tag);
+        foreach ($request->gallery as $key => $value) {
+            // $url = Storage::put('public/image', $value);
+            Gallery::query()->where('id', $key)->update([
+                'product_id' => $product->id,
+                'image_path' => $value
+            ]);
+        }
+        // dd($product);
+        // return redirect()->route('product.index');
+        return response()->json([
+            'success' => 'cập nhật thành công',
+            'data' => $product->findOrFail($id)->load([
+                "Category",
+                "Galleries",
+                "Tag"
+            ])
+        ]);
     }
 
     /**
